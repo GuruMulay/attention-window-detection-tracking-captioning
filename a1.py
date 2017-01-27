@@ -8,6 +8,10 @@ if __name__ == '__main__':
     if len(sys.argv) == 3:
         # Set up input and output video files
         input_video = cv2.VideoCapture(sys.argv[1])
+
+        if not input_video.isOpened():
+            print "Can't open the input video {}".format(sys.argv[1])
+            sys.exit(0)
        
         # May want to ensure that the files exist later on
 
@@ -65,11 +69,11 @@ if __name__ == '__main__':
                     cur_y += vel_y
                 else:
                     # We reached the end of temporal extent
-                    print "Done"
+                    print "Finished"
                     break
             else:
                 # Video is finished
-                print "Reached the end of the input video"
+                print "Finished"
                 break
                                        
                 
