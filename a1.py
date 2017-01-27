@@ -12,18 +12,19 @@ if __name__ == '__main__':
         # May want to ensure that the files exist later on
 
         # Ask the user of begin and end frames
-        start_frame = input('Enter the first frame (0 based) where the object becomes visible: ')
+        start_frame = input("Enter the first frame (0 based) where the object becomes visible: ")
         input_video.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, start_frame)
         
-        end_frame = input('Enter the last frame (0 based) where the object is visible: ')
+        end_frame = input("Enter the last frame (0 based) where the object is visible: ")
                                        
 
         # Ask the user of the bounding box in the first frame
-        x, y, height, width = input('Enter bounding box description (x, y, height, width) [comma separated]: ')
+        # x is the column number, y is the row number, both relative to the upper left
+        x, y, width, height = input("Enter bounding box description (x, y, width, height) [comma separated]: ")
 
-        vel_x, vel_y = input('Enter the velocity (rows_per_second, columns_per_second) [comma separated]: ')
+        vel_x, vel_y = input("Enter the velocity (rows_per_second (x), columns_per_second (y)) [comma separated]: ")
 
-        out_height, out_width = input('Enter the height and width of ouput video: ')
+        out_width, out_height = input("Enter the (width, height) of ouput video [comma separated]: ")
 
         # The output video is going to have same codec, fps as the input video, but the resolution is changed as asked by user
         output_video = cv2.VideoWriter(sys.argv[2], int(input_video.get(cv2.cv.CV_CAP_PROP_FOURCC)), int(input_video.get(cv2.cv.CV_CAP_PROP_FPS)), (out_width, out_height))
@@ -40,6 +41,8 @@ if __name__ == '__main__':
                     # If the current frame is within the input temporal range
 
                     # Get input video height and width
+                    # Only place where height precedes width
+                    # Normally, opencv functions work with width first, height second
                     input_height, input_width = frame.shape[:2]
 
                     # Rounding off to pixel positions
@@ -55,7 +58,7 @@ if __name__ == '__main__':
                         warped_frame = cv2.warpAffine(frame, transform_mat, (out_width, out_height))
                         output_video.write(warped_frame)
                     else:
-                        print 'Invalid bounding box {} over input frame size {}. Stopping...'.format((cur_x_rounded, cur_y_rounded, cur_x_rounded + width, cur_y_rounded + height), (input_width, input_height))
+                        print "Bounding box {} exceeds input frame size {}. Stopping...".format((cur_x_rounded, cur_y_rounded, cur_x_rounded + width, cur_y_rounded + height), (input_width, input_height))
                         break
                         
                     cur_x += vel_x
@@ -65,8 +68,8 @@ if __name__ == '__main__':
                     print "Done"
                     break
             else:
+                # Video is finished
                 print "Reached the end of the input video"
-                # We reached the end of the video itself
                 break
                                        
                 
@@ -74,4 +77,4 @@ if __name__ == '__main__':
         output_video.release()
         
     else:
-        print 'Usage: python a1.py <input_video> <output_video>'
+        print "Usage: python a1.py <input_video> <output_video>"
