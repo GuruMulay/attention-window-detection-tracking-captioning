@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import cv2
 import sys
-import math
 import numpy as np
 
 if __name__ == '__main__':
@@ -38,7 +37,7 @@ if __name__ == '__main__':
 
         # Assume MJPG output
         # Apparently the Gstreamer backend for OpenCV is broken
-        output_video = cv2.VideoWriter(sys.argv[2], cv2.cv.CV_FOURCC('M', 'J', 'P', 'G'), fps, (out_width, out_height))        
+        output_video = cv2.VideoWriter(sys.argv[2], cv2.cv.CV_FOURCC('T', 'H', 'E', 'O'), fps, (out_width, out_height))        
 
         # These will change due to velocity
         cur_x = x
