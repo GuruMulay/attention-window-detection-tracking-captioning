@@ -1,4 +1,4 @@
-1. Contains of cs510 folder: 	
+1. Contents of cs510 folder: 	
 	a1.py - main python file 
 	tests - folder with test cases and testing script run.sh
 	input video - example1.mov (ensure it lies in the same folder as of a1.py)
