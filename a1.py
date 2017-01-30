@@ -12,7 +12,7 @@ def print_video_properties(video) :
     print "number of frames in the video: ", video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
 
 if __name__ == '__main__':
-    if len(sys.argv) == 3:
+    if len(sys.argv) >= 3:
         # Set up the input video file
         input_video = cv2.VideoCapture(sys.argv[1])
         # print_video_properties(input_video)
@@ -78,12 +78,23 @@ if __name__ == '__main__':
                     cur_y_rounded = round(cur_y)
 
                     if cur_x_rounded >= 0 and cur_y_rounded >= 0 and cur_x_rounded + width - 1 < input_width and cur_y_rounded + height - 1 < input_height:
-                        src_points = np.array([(cur_x_rounded, cur_y_rounded), (cur_x_rounded + width - 1, cur_y_rounded + height - 1), (cur_x_rounded, cur_y_rounded + height - 1)], np.float32)
-                        dest_points = np.array([(0, 0), (out_width - 1, out_height - 1), (0, out_height - 1)], np.float32)
-                      
-                        transform_mat = cv2.getAffineTransform(src_points, dest_points)
-                        warped_frame = cv2.warpAffine(frame, transform_mat, (out_width, out_height))
-                        output_video.write(warped_frame)
+                        
+                        # Perspective transformation (Option: -persp)
+						if len(sys.argv)> 3 and sys.argv[3] == "-persp":
+							src_points = np.array([(cur_x_rounded, cur_y_rounded), (cur_x_rounded + width - 1, cur_y_rounded), (cur_x_rounded + width - 1, cur_y_rounded + height - 1), (cur_x_rounded, cur_y_rounded + height - 1)], np.float32)
+							dest_points = np.array([(0, 0), (out_width - 1, 0), (out_width - 1, out_height - 1), (0, out_height - 1)], np.float32)
+							
+							transform_mat = cv2.getPerspectiveTransform(src_points, dest_points)
+							warped_frame = cv2.warpPerspective(frame, transform_mat, (out_width, out_height))
+						else:
+							# Affine transformation
+							src_points = np.array([(cur_x_rounded, cur_y_rounded), (cur_x_rounded + width - 1, cur_y_rounded + height - 1), (cur_x_rounded, cur_y_rounded + height - 1)], np.float32)
+							dest_points = np.array([(0, 0), (out_width - 1, out_height - 1), (0, out_height - 1)], np.float32)
+
+							transform_mat = cv2.getAffineTransform(src_points, dest_points)
+							warped_frame = cv2.warpAffine(frame, transform_mat, (out_width, out_height))
+							
+						output_video.write(warped_frame)
                     else:
                         print "Bounding box {} exceeds input frame size {}. Stopping...".format((cur_x_rounded, cur_y_rounded, cur_x_rounded + width - 1, cur_y_rounded + height - 1), (input_width, input_height))
                         break
@@ -101,4 +112,4 @@ if __name__ == '__main__':
         output_video.release()
         
     else:
-        print "Usage: python a1.py <input_video> <output_video>"
+        print "Usage: python a1.py <input_video> <output_video> [-persp]"
