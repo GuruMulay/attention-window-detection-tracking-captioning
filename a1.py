@@ -3,10 +3,19 @@ import cv2
 import sys
 import numpy as np
 
+def print_video_properties(video) :
+    # prints the properties for the 'VideoCapture'd video
+    print "video properties for {}:".format(video)
+    print "codec code: ", video.get(cv2.cv.CV_CAP_PROP_FOURCC)
+    print "(width, height) of the frame: ", video.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH), video.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
+    print "frame rate in fps: ", video.get(cv2.cv.CV_CAP_PROP_FPS)
+    print "number of frames in the video: ", video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
+
 if __name__ == '__main__':
-    if len(sys.argv) == 3:
+    if len(sys.argv) >= 3:
         # Set up the input video file
         input_video = cv2.VideoCapture(sys.argv[1])
+        # print_video_properties(input_video)
 
         # Exit if can't open the input file
         if not input_video.isOpened():
@@ -30,7 +39,11 @@ if __name__ == '__main__':
         # with right and down pointed components
         vel_x, vel_y = input("Enter the velocity (columns_per_frame (x/f), rows_per_frame (y/f)) [comma separated]: ")
 
-        out_width, out_height = input("Enter the (width, height) of ouput video [comma separated]: ")
+        out_width, out_height = input("Enter the (width, height) of output video [comma separated]: ")
+
+        if out_width < 0 or out_height < 0:
+            print "Invalid (negative) (width, height) of output video"
+            sys.exit(0)
 
         # If we can get the fps of the input video, then fine, otherwise assume 30 fps for output
         fps = input_video.get(cv2.cv.CV_CAP_PROP_FPS) if input_video.get(cv2.cv.CV_CAP_PROP_FPS) > 0.0 else 30
@@ -65,12 +78,23 @@ if __name__ == '__main__':
                     cur_y_rounded = round(cur_y)
 
                     if cur_x_rounded >= 0 and cur_y_rounded >= 0 and cur_x_rounded + width - 1 < input_width and cur_y_rounded + height - 1 < input_height:
-                        src_points = np.array([(cur_x_rounded, cur_y_rounded), (cur_x_rounded + width - 1, cur_y_rounded + height - 1), (cur_x_rounded, cur_y_rounded + height - 1)], np.float32)
-                        dest_points = np.array([(0, 0), (out_width - 1, out_height - 1), (0, out_height - 1)], np.float32)
-                      
-                        transform_mat = cv2.getAffineTransform(src_points, dest_points)
-                        warped_frame = cv2.warpAffine(frame, transform_mat, (out_width, out_height))
-                        output_video.write(warped_frame)
+                        
+                        # Perspective transformation (Option: -persp)
+						if len(sys.argv)> 3 and sys.argv[3] == "-persp":
+							src_points = np.array([(cur_x_rounded, cur_y_rounded), (cur_x_rounded + width - 1, cur_y_rounded), (cur_x_rounded + width - 1, cur_y_rounded + height - 1), (cur_x_rounded, cur_y_rounded + height - 1)], np.float32)
+							dest_points = np.array([(0, 0), (out_width - 1, 0), (out_width - 1, out_height - 1), (0, out_height - 1)], np.float32)
+							
+							transform_mat = cv2.getPerspectiveTransform(src_points, dest_points)
+							warped_frame = cv2.warpPerspective(frame, transform_mat, (out_width, out_height))
+						else:
+							# Affine transformation
+							src_points = np.array([(cur_x_rounded, cur_y_rounded), (cur_x_rounded + width - 1, cur_y_rounded + height - 1), (cur_x_rounded, cur_y_rounded + height - 1)], np.float32)
+							dest_points = np.array([(0, 0), (out_width - 1, out_height - 1), (0, out_height - 1)], np.float32)
+
+							transform_mat = cv2.getAffineTransform(src_points, dest_points)
+							warped_frame = cv2.warpAffine(frame, transform_mat, (out_width, out_height))
+							
+						output_video.write(warped_frame)
                     else:
                         print "Bounding box {} exceeds input frame size {}. Stopping...".format((cur_x_rounded, cur_y_rounded, cur_x_rounded + width - 1, cur_y_rounded + height - 1), (input_width, input_height))
                         break
@@ -83,10 +107,9 @@ if __name__ == '__main__':
             
             # Go to next frame
             frame_index += 1
-                                       
-                
+
         input_video.release()
         output_video.release()
         
     else:
-        print "Usage: python a1.py <input_video> <output_video>"
+        print "Usage: python a1.py <input_video> <output_video> [-persp]"

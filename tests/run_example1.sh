@@ -5,4 +5,4 @@ pushd `dirname $0` > /dev/null
 SCRIPTPATH=`pwd`
 popd > /dev/null
 
-cat "$SCRIPTPATH"/right_window.txt | "$SCRIPTPATH"/../a1.py "$SCRIPTPATH"/example1.ogv "$SCRIPTPATH"/right_window.ogv
+cat "$SCRIPTPATH"/"$1".txt | "$SCRIPTPATH"/../a1.py "$SCRIPTPATH"/example1.ogv "$SCRIPTPATH"/"$1$2".ogv "$2"
