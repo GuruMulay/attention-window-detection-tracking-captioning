@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from operator import attrgetter, itemgetter
 import window_history
+from clustering1 import cluster_keypoints
 
 
 def keypoint_to_window(kp):
@@ -48,7 +49,6 @@ def extract_window_from_frame(w, frame):
     return out_frame
 
 
-
 def get_keypoint_attrs(k):
     """Extracts individual SIFT keypoint details from its octave attribute
 
@@ -65,7 +65,6 @@ def get_keypoint_attrs(k):
     scale = 1 / float(1 << octave) if octave >= 0 else (float)(1 << -octave)
 
     return (octave, layer, scale)
-
 
 def process_naive(frame, sift):
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -130,7 +129,8 @@ def process_naive2(frame, sift):
 
 _impls = {
     'naive': process_naive,
-    'naive2' : process_naive2
+    'naive2': process_naive2,
+    'cluster1': cluster_keypoints
 }
 
 
@@ -175,7 +175,7 @@ while True:
         # which should accept a frame returned by cv2.VideoCapture
         # and optionally one or more extra arguments if needed
         # Be sure to link your implementation in _impls
-        aw, kps = process('naive2', frame, sift)
+        aw, kps = process('cluster1', frame, sift)
         
         frame_with_kps = None
         frame_with_kps = cv2.drawKeypoints(frame, kps, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
