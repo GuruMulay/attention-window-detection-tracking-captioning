@@ -85,8 +85,43 @@ def process_naive(frame, sift):
             best_keypoints += [ kps[i] ]
             break
 
+    assert frame_attention_window != None
     return (frame_attention_window, best_keypoints)
-    
+
+
+def process_naive2(frame, sift):
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    kps = sift.detect(frame_gray, None)
+
+    sz_and_rsp = np.array([[ k.size for k in kps ], [ k.response for k in kps ]], dtype=np.float32)
+
+    sz_and_rsp[0] /= np.max(sz_and_rsp[0])
+    sz_and_rsp[1] /= np.max(sz_and_rsp[1])
+
+    scores = sz_and_rsp[0] * sz_and_rsp[1]
+
+    # Sort keypoints based on score
+    sorted_kps = map(None, kps, scores)
+
+    sorted_kps.sort(key=operator.itemgetter(1), reverse=True)
+
+    best_keypoints = []
+    frame_attention_window = None
+
+    for kp, score in sorted_kps:
+        aw = keypoint_to_window(kp)
+        octave, layer, scale = get_keypoint_attrs(kp)
+
+        if window_history.add_if_new(aw, scale):
+            frame_attention_window = aw
+            best_keypoints += [ kp ]
+            break
+
+    assert frame_attention_window != None
+    return (frame_attention_window, best_keypoints)
+
+
 # Register your implementation here
 # Key is the name of the implementation
 # Value is the function that actually implements it
@@ -94,7 +129,8 @@ def process_naive(frame, sift):
 # mentioned in documentation of process() for consistency
 
 _impls = {
-    'naive': process_naive
+    'naive': process_naive,
+    'naive2' : process_naive2
 }
 
 
@@ -139,8 +175,8 @@ while True:
         # which should accept a frame returned by cv2.VideoCapture
         # and optionally one or more extra arguments if needed
         # Be sure to link your implementation in _impls
-        aw, kps = process('naive', frame, sift)
-
+        aw, kps = process('naive2', frame, sift)
+        
         frame_with_kps = None
         frame_with_kps = cv2.drawKeypoints(frame, kps, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
