@@ -3,7 +3,7 @@
 import cv2
 import sys
 import numpy as np
-from operator import attrgetter
+from operator import attrgetter, itemgetter
 import window_history
 
 
@@ -104,7 +104,7 @@ def process_naive2(frame, sift):
     # Sort keypoints based on score
     sorted_kps = map(None, kps, scores)
 
-    sorted_kps.sort(key=operator.itemgetter(1), reverse=True)
+    sorted_kps.sort(key=itemgetter(1), reverse=True)
 
     best_keypoints = []
     frame_attention_window = None
