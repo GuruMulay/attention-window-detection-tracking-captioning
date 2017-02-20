@@ -6,7 +6,7 @@ import numpy as np
 from operator import attrgetter, itemgetter
 import window_history
 from clustering1 import cluster_keypoints
-
+from bms import BMS
 
 def keypoint_to_window(kp):
     """Converts the position of keypoint to a square window using its 'size'
@@ -49,6 +49,7 @@ def extract_window_from_frame(w, frame):
     return out_frame
 
 
+
 def get_keypoint_attrs(k):
     """Extracts individual SIFT keypoint details from its octave attribute
 
@@ -65,6 +66,7 @@ def get_keypoint_attrs(k):
     scale = 1 / float(1 << octave) if octave >= 0 else (float)(1 << -octave)
 
     return (octave, layer, scale)
+
 
 def process_naive(frame, sift):
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -130,7 +132,8 @@ def process_naive2(frame, sift):
 _impls = {
     'naive': process_naive,
     'naive2': process_naive2,
-    'cluster1': cluster_keypoints
+    'cluster1': cluster_keypoints,
+    'bms' : process_bms
 }
 
 
@@ -138,7 +141,7 @@ def process(impl, frame, *args):
     """Process the frame to yield an attention window and corresponding one or more keypoints
     
     Args:
-        impl: The name of methodology to be executed. Valid names are [ 'naive' ]
+        impl: The name of methodology to be executed. Valid names are [ 'naive', 'naive2', 'cluster1', 'bms' ]
         frame: The frame yielded by cv2.VideoCapture
         args: Extra arguments needed by the function that actually implements the underlying methodolody
 
@@ -161,6 +164,8 @@ if not input_video.isOpened():
     sys.exit(0)
 
 sift = cv2.xfeatures2d.SIFT_create()
+bms = BMS(opening_width=13, dilation_width=1, normalize=False)
+#bms = BMS()
 
 cv2.namedWindow("Test", cv2.WINDOW_AUTOSIZE)
 
@@ -175,7 +180,7 @@ while True:
         # which should accept a frame returned by cv2.VideoCapture
         # and optionally one or more extra arguments if needed
         # Be sure to link your implementation in _impls
-        aw, kps = process('cluster1', frame, sift)
+        aw, kps = process('naive2', frame, sift)
         
         frame_with_kps = None
         frame_with_kps = cv2.drawKeypoints(frame, kps, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
