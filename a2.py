@@ -1,10 +1,19 @@
 #!/usr/bin/env python
-
+"""
+Usage: python a2.py input_video [starting frame] [showAll]
+Example: python a2.py tests/example1.ogv 190 showAll 
+	(for showing all keypints starting from frame 190)
+	python a2.py tests/example1.ogv 190
+	(for showing only cluster keypints starting from frame 190)
+"""
 import cv2
 import sys
 import numpy as np
 from operator import attrgetter
 import window_history
+import cluster_dbscan
+
+print(__doc__)
 
 
 def keypoint_to_window(kp):
@@ -94,7 +103,8 @@ def process_naive(frame, sift):
 # mentioned in documentation of process() for consistency
 
 _impls = {
-    'naive': process_naive
+    'naive': process_naive,
+	'dbscan': cluster_dbscan.cluster
 }
 
 
@@ -131,28 +141,40 @@ cv2.namedWindow("Test", cv2.WINDOW_AUTOSIZE)
 frame_counter = 0
 while True:
     read_success, frame = input_video.read()
+    if len(sys.argv)>2 and frame_counter < int(sys.argv[2]):
+		frame_counter+=1
+		continue
         
     if read_success:
-        print 'Advancing to next frame'
+		print 'Advancing to next frame'
 
-        # Replace 'naive' with your own implementation
-        # which should accept a frame returned by cv2.VideoCapture
-        # and optionally one or more extra arguments if needed
-        # Be sure to link your implementation in _impls
-        aw, kps = process('naive', frame, sift)
+		# Replace 'naive' with your own implementation
+		# which should accept a frame returned by cv2.VideoCapture
+		# and optionally one or more extra arguments if needed
+		# Be sure to link your implementation in _impls
+		#aw, kps = process('naive', frame, sift)
+		aw, kps = process('dbscan', frame, sift)
 
-        frame_with_kps = None
-        frame_with_kps = cv2.drawKeypoints(frame, kps, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+		frame_with_kps = frame.copy()
+		num_colors = len(cluster_dbscan.colors)
+		for i in list(range(0,50)):			
+			class_i = [kp for kp in kps if kp.class_id==i]
+			if len(class_i) > 0:
+				frame_with_kps = cv2.drawKeypoints(frame_with_kps, class_i, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, color = cluster_dbscan.colors[i%num_colors])
+			
+		class_i = [kp for kp in kps if kp.class_id==-1]
+		frame_with_kps = cv2.drawKeypoints(frame_with_kps, class_i, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, color = [255,255,255])
+		frame_with_kps = cv2.rectangle(frame_with_kps, (int(aw[0]), int(aw[1])), (int(aw[2]), int(aw[3])) , (0,255,255),3)
 
-        frame_counter += 1
+		frame_counter += 1
 
-        cv2.imshow("Test", frame_with_kps)
-        cv2.imwrite('results/' + str(frame_counter) + '.jpg', extract_window_from_frame(aw, frame))
-        
-        # Use 'q' to stop the processing
-        # and any other key to progress to next frame
-        if cv2.waitKey(0) == ord('q'):
-            break
+		cv2.imshow("Test", frame_with_kps)
+		cv2.imwrite('results/' + str(frame_counter) + '.jpg', extract_window_from_frame(aw, frame))
+
+		# Use 'q' to stop the processing
+		# and any other key to progress to next frame
+		if cv2.waitKey(1000) == ord('q'):
+			break
     else:
         print 'Reached end of video. Stopping...'
         break
