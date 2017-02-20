@@ -21,6 +21,14 @@ class BMS:
 
         
     def generate_boolean_maps(self, step):
+        """Generates boolean maps by thresholding from minimum feature map value to the highest with a step interval 
+
+        Args:
+            step: The step size to take when going in the min-max interval of feature map values. Authors recommend 8
+
+        Returns:
+            Nothing
+        """
         for f in self.feature_maps:
             # To assign limits for thresholding
             min_val, max_val = cv2.minMaxLoc(f)[:2]
@@ -59,28 +67,35 @@ class BMS:
         h, w = am.shape[:2]
 
         # Mask out all the pixels connected to borders
+        # since we care only about the pixels that are surrounded
+        # and 1 filled regions that are connected to border are
+        # not surrounded under the definition
+        
         if self.handle_border:
             for row in range(h):
-                # All zero means no boundaries for flood filling
+                # All zero mask means no boundaries for flood filling
                 # mask will change after every floodFill by setting the
                 # filled pixels to a new value as set in the flags
                 # which is 1 by default
                 mask = np.zeros((h+2, w+2), dtype=np.uint8)
-                jump = random.randint(5, 25) if random.random()>0.99 else 0
+                # Random jump of pixel between 5 and 24 included with probability 0.01, otherwise 0
+                jump = random.randint(5, 24) if random.random()>0.99 else 0
                 if am[row, 0+jump] != 1:
+                    # Flood fill 
                     cv2.floodFill(am, mask, (0+jump, row), (1,), (0,), (0,), 8) 
                 mask = np.zeros((h+2, w+2), dtype=np.uint8)
-                jump = random.randint(5, 25) if random.random()>0.99 else 0
+                # Calculate jump from the other end of the row
+                jump = random.randint(5, 24) if random.random()>0.99 else 0
                 if am[row, w-1-jump] != 1:
                     cv2.floodFill(am, mask, (w-1-jump, row), (1,), (0,), (0,), 8)
 
             for col in range(w):
                 mask = np.zeros((h+2, w+2), dtype=np.uint8)
-                jump = random.randint(5, 25) if random.random()>0.99 else 0
+                jump = random.randint(5, 24) if random.random()>0.99 else 0
                 if am[0+jump, col] != 1:
                     cv2.floodFill(am, mask, (col, 0+jump), (1,), (0,), (0,), 8) 
                 mask = np.zeros((h+2, w+2), dtype=np.uint8)
-                jump = random.randint(5, 25) if random.random()>0.99 else 0
+                jump = random.randint(5, 24) if random.random()>0.99 else 0
                 if am[h-1-jump, col] != 1:
                     cv2.floodFill(am, mask, (col, h-1-jump), (1,), (0,), (0,), 8)
                     
@@ -97,13 +112,15 @@ class BMS:
 		if am[0, col] != 1:
 		    cv2.floodFill(am, mask, (col,0), (1,), (0,), (0,), 8)
                 mask = np.zeros((h+2, w+2), dtype=np.uint8)
-		if am[w-1, col] != 1:
+		if am[h-1, col] != 1:
 		    cv2.floodFill(am, mask, (col,h-1), (1,), (0,), (0,), 8)
             
         #min_val, max_val = cv2.minMaxLoc(am)[0:2] 
-        
+
+        # Make the pixels not equal to 1 white
         am = (am != 1).astype(np.uint8) * 255
 
+        
         if self.dilation_width > 0:
             am = cv2.dilate(am, None, am, (-1, -1), self.dilation_width)
 
