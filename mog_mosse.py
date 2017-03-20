@@ -153,9 +153,11 @@ class App:
     def __init__(self, video_src, paused = False):
         self.cap = video.create_capture(video_src)
         _, self.frame = self.cap.read()
+        # self.out is the output video writer
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         self.out = cv2.VideoWriter('output.avi',fourcc, 30,(self.frame.shape[1],self.frame.shape[0]))
         cv2.imshow('frame', self.frame)
+        # For manually selecting objects to track. Not using, but not removing either.
         self.rect_sel = RectSelector('frame', self.onrect)
         self.trackers = []
         self.paused = paused
@@ -173,10 +175,14 @@ class App:
                     break
                 # First update existing trackers with current frame
                 frame_gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+                # Calculate the union of all existing trackers
+                # The type of object returned depends on the relationship between the operands. 
+                # The union of polygons (for example) will be a polygon or a multi-polygon depending on whether they intersect or not.
                 union_of_trackers = None
                 for tracker in self.trackers:
                     tracker.update(frame_gray)
                     (x, y), (w, h) = tracker.pos, tracker.size
+                    # tracker returns center and size; convert it to topleft and bottomright points
                     x1, y1, x2, y2 = int(x-0.5*w), int(y-0.5*h), int(x+0.5*w), int(y+0.5*h)
                     b = gs.box(x1,y1,x2,y2)
                     if not union_of_trackers:
@@ -184,19 +190,19 @@ class App:
                     else:
                         union_of_trackers = union_of_trackers.union(b)
                 
-                
+                # Call MOG and get a list of large enough foregound rects
                 rects = mog.getForegroundRects(self.frame)                
                 for rect in rects:                    
-                    x, y, w, h = rect
-                    r = gs.box(x,y,x+w,y+h)
-                    # check if this rect is already mostly covered by other trackers
+                    x, y, w, h = rect                    
+                    r = gs.box(x,y,x+w,y+h) # MOG returns topleft and size; need topleft and bottomright points
+                    # check if this rect(MOG) is already mostly covered by other trackers(MOSSE)
                     if union_of_trackers:
                         common_area = union_of_trackers.intersection(r).area
                         ratio_covered = common_area/r.area
                         if ratio_covered > .6:
                             continue
                     
-                    # check if this rect almost contains another tracker, if yes then update that tracker's rect
+                    # check if this rect(MOG) almost contains another tracker(MOSSE), if yes then update that tracker's rect
                     new_rect = True
                     for tracker in self.trackers:
                         (x, y), (w, h) = tracker.pos, tracker.size
@@ -213,7 +219,7 @@ class App:
                             new_rect = False
                             break
                             
-                    # otherwise new tracker found
+                    # otherwise new tracker found; append to the list of trackers
                     if new_rect:
                         x, y, w, h = rect
                         tracker = MOSSE(frame_gray, (x,y,x+w,y+h), len(self.trackers))
