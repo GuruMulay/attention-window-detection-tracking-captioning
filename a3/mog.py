@@ -41,7 +41,7 @@ if __name__ == '__main__':
     while(1):
         ret, frame = cap.read()
         if ret:            
-            rects = getMotionRect(frame)
+            rects = getForegroundRects(frame)
             for r in rects:
                 x,y,w,h = r
                 cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
