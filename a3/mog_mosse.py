@@ -36,6 +36,7 @@ from common import draw_str, RectSelector
 import video
 
 import mog
+import csv
 
 def rnd_warp(a):
     h, w = a.shape[:2]
@@ -168,6 +169,8 @@ class App:
         self.trackers.append(tracker)
 
     def run(self):
+        frame_number = 0
+        csvf = open('tracks.csv', 'w')
         while True:
             if not self.paused:
                 ret, self.frame = self.cap.read()                
@@ -224,9 +227,16 @@ class App:
                         x, y, w, h = rect
                         tracker = MOSSE(frame_gray, (x,y,x+w,y+h), len(self.trackers))
                         self.trackers.append(tracker)
-                    
-                    
-                    
+
+                # write csv output file
+                for tracker in self.trackers:
+                    (x, y), (w, h) = tracker.pos, tracker.size
+                    writer = csv.writer(csvf)
+                    writer.writerow((tracker.index, frame_number, x, y, x+w, y+h))
+
+                # print("self.trackers", self.trackers)
+                # print("frame number", frame_number)
+                frame_number += 1
 
             vis = self.frame.copy()
             for tracker in self.trackers:
