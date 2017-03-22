@@ -4,13 +4,13 @@ import vibe
 import sys
 
 
-def getForegroundRects(foreground):
+def get_foreground_rects(foreground):
     kernel = np.ones((5,5),np.uint8)
 
     opening = cv2.morphologyEx(foreground, cv2.MORPH_OPEN, kernel)
     #erosion = cv2.erode(opening, np.ones((7,1), np.uint8), iterations=10)
     #blur = cv2.GaussianBlur(erosion,(99,99),0)
-    thresh = cv2.threshold(opening,30,255,0)[1]
+    thresh = cv2.threshold(opening, 30, 255, 0)[1]
 
     cv2.imshow("processed", thresh)
     contours = cv2.findContours(thresh, 1, 2)[1]
