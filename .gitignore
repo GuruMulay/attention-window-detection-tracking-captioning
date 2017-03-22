@@ -6,6 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
+#Video extensions
+*.avi
+*.mov
+*.mp4
+*.ogv
+
+
 # Distribution / packaging
 .Python
 env/
