@@ -6,7 +6,8 @@ import numpy as np
 from operator import attrgetter, itemgetter
 import window_history
 from clustering1 import cluster_keypoints
-from bms import BMS
+import cluster_dbscan
+
 
 def keypoint_to_window(kp):
     """Converts the position of keypoint to a square window using its 'size'
@@ -17,7 +18,7 @@ def keypoint_to_window(kp):
     Returns:
         Window in the form of a 4-tuple for x,y coordinates for top-left and bottom right corners
     """
-    
+
     x, y = kp.pt
     r = kp.size/2
 
@@ -25,7 +26,6 @@ def keypoint_to_window(kp):
     x1, y1 = (x+r, y+r)
 
     return (x0, y0, x1, y1)
-
 
 
 def extract_window_from_frame(w, frame):
@@ -38,7 +38,7 @@ def extract_window_from_frame(w, frame):
     Returns:
         Part of the frame demarcated by window 'w'
     """
-    
+
     src_points = np.array( [ (aw[0], aw[1]), (aw[0], aw[3]), (aw[2], aw[3]) ] , np.float32)
     dest_points = np.array( [ (0, 0), (0, aw[3] - aw[1]), (aw[2] - aw[0], aw[3] - aw[1]) ] , np.float32)
 
@@ -47,7 +47,6 @@ def extract_window_from_frame(w, frame):
     out_frame = cv2.warpAffine(frame, t, (int(aw[2] - aw[0]), int(aw[3] - aw[1])))
 
     return out_frame
-
 
 
 def get_keypoint_attrs(k):
@@ -59,7 +58,7 @@ def get_keypoint_attrs(k):
     Returns:
         (octave, layer, scale): where octave, layer, and scale have usual meanings
     """
-    
+
     octave = k.octave & 255
     layer = (k.octave >> 8) & 255
     octave = octave if octave < 128 else (-128 | octave) # http://code.opencv.org/issues/2987
@@ -76,14 +75,14 @@ def process_naive(frame, sift):
 
     best_keypoints = []
     frame_attention_window = None
-    
+
     for i in range(len(kps)):
         aw = keypoint_to_window(kps[i])
-        octave, layer, scale= get_keypoint_attrs(kps[i])
+        octave, layer, scale = get_keypoint_attrs(kps[i])
 
         if window_history.add_if_new(aw, scale):
             frame_attention_window = aw
-            best_keypoints += [ kps[i] ]
+            best_keypoints += [kps[i]]
             break
 
     assert frame_attention_window != None
@@ -95,7 +94,7 @@ def process_naive2(frame, sift):
 
     kps = sift.detect(frame_gray, None)
 
-    sz_and_rsp = np.array([[ k.size for k in kps ], [ k.response for k in kps ]], dtype=np.float32)
+    sz_and_rsp = np.array([[k.size for k in kps], [k.response for k in kps]], dtype=np.float32)
 
     sz_and_rsp[0] /= np.max(sz_and_rsp[0])
     sz_and_rsp[1] /= np.max(sz_and_rsp[1])
@@ -133,15 +132,15 @@ _impls = {
     'naive': process_naive,
     'naive2': process_naive2,
     'cluster1': cluster_keypoints,
-    'bms' : process_bms
+    'dbscan': cluster_dbscan.cluster
 }
 
 
 def process(impl, frame, *args):
     """Process the frame to yield an attention window and corresponding one or more keypoints
-    
+
     Args:
-        impl: The name of methodology to be executed. Valid names are [ 'naive', 'naive2', 'cluster1', 'bms' ]
+        impl: The name of methodology to be executed. Valid names are [ 'naive', 'naive2', 'cluster1', 'dbscan']
         frame: The frame yielded by cv2.VideoCapture
         args: Extra arguments needed by the function that actually implements the underlying methodolody
 
@@ -152,7 +151,7 @@ def process(impl, frame, *args):
         return _impls[impl](frame, *args)
     else:
         raise ValueError('Unimplemented implementation name passed as argument')
-    
+
 
 # The main thread follows below
 
@@ -164,7 +163,7 @@ if not input_video.isOpened():
     sys.exit(0)
 
 sift = cv2.xfeatures2d.SIFT_create()
-bms = BMS(opening_width=13, dilation_width=1, normalize=False)
+#bms = BMS(opening_width=13, dilation_width=1, normalize=False)
 #bms = BMS()
 
 cv2.namedWindow("Test", cv2.WINDOW_AUTOSIZE)
@@ -172,7 +171,10 @@ cv2.namedWindow("Test", cv2.WINDOW_AUTOSIZE)
 frame_counter = 0
 while True:
     read_success, frame = input_video.read()
-        
+    if len(sys.argv)>2 and frame_counter < int(sys.argv[2]):
+        frame_counter += 1
+        continue
+
     if read_success:
         print 'Advancing to next frame'
 
@@ -180,19 +182,28 @@ while True:
         # which should accept a frame returned by cv2.VideoCapture
         # and optionally one or more extra arguments if needed
         # Be sure to link your implementation in _impls
-        aw, kps = process('naive2', frame, sift)
-        
-        frame_with_kps = None
-        frame_with_kps = cv2.drawKeypoints(frame, kps, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        # aw, kps = process('naive', frame, sift)
+        aw, kps = process('dbscan', frame, sift)
+
+        frame_with_kps = frame.copy()
+        num_colors = len(cluster_dbscan.colors)
+        for i in list(range(0, 50)):
+            class_i = [kp for kp in kps if kp.class_id == i]
+            if len(class_i) > 0:
+                frame_with_kps = cv2.drawKeypoints(frame_with_kps, class_i, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, color = cluster_dbscan.colors[i%num_colors])
+
+        class_i = [kp for kp in kps if kp.class_id == -1]
+        frame_with_kps = cv2.drawKeypoints(frame_with_kps, class_i, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, color = [255,255,255])
+        frame_with_kps = cv2.rectangle(frame_with_kps, (int(aw[0]), int(aw[1])), (int(aw[2]), int(aw[3])) , (0,255,255),3)
 
         frame_counter += 1
 
         cv2.imshow("Test", frame_with_kps)
         cv2.imwrite('results/' + str(frame_counter) + '.jpg', extract_window_from_frame(aw, frame))
-        
+
         # Use 'q' to stop the processing
         # and any other key to progress to next frame
-        if cv2.waitKey(0) == ord('q'):
+        if cv2.waitKey(1000) == ord('q'):
             break
     else:
         print 'Reached end of video. Stopping...'
