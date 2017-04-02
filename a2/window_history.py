@@ -48,7 +48,7 @@ def _get_overlap(window_new, window_old):
     if common_window == None:
         return 0.0
     else:
-        return area(common_window) / float(area(window_old))
+        return area(common_window) / float(area(window_old) + area(window_new) - area(common_window))
 
 def _does_overlap(window, sigma):
     """Checks if the window overlaps with any of previous windows at same sigma

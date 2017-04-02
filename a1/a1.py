@@ -6,10 +6,10 @@ import numpy as np
 def print_video_properties(video) :
     # prints the properties for the 'VideoCapture'd video
     print "video properties for {}:".format(video)
-    print "codec code: ", video.get(cv2.cv.CV_CAP_PROP_FOURCC)
-    print "(width, height) of the frame: ", video.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH), video.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
-    print "frame rate in fps: ", video.get(cv2.cv.CV_CAP_PROP_FPS)
-    print "number of frames in the video: ", video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
+    print "codec code: ", video.get(cv2.CAP_PROP_FOURCC)
+    print "(width, height) of the frame: ", video.get(cv2.CAP_PROP_FRAME_WIDTH), video.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    print "frame rate in fps: ", video.get(cv2.CAP_PROP_FPS)
+    print "number of frames in the video: ", video.get(cv2.CAP_PROP_FRAME_COUNT)
 
 if __name__ == '__main__':
     if len(sys.argv) >= 3:
@@ -46,11 +46,11 @@ if __name__ == '__main__':
             sys.exit(0)
 
         # If we can get the fps of the input video, then fine, otherwise assume 30 fps for output
-        fps = input_video.get(cv2.cv.CV_CAP_PROP_FPS) if input_video.get(cv2.cv.CV_CAP_PROP_FPS) > 0.0 else 30
+        fps = input_video.get(cv2.CAP_PROP_FPS) if input_video.get(cv2.CAP_PROP_FPS) > 0.0 else 30
 
         # Assume MJPG output
         # Apparently the Gstreamer backend for OpenCV is broken
-        output_video = cv2.VideoWriter(sys.argv[2], cv2.cv.CV_FOURCC('T', 'H', 'E', 'O'), fps, (out_width, out_height))        
+        output_video = cv2.VideoWriter(sys.argv[2], cv2.VideoWriter_fourcc('T', 'H', 'E', 'O'), fps, (out_width, out_height))        
 
         # These will change due to velocity
         cur_x = x
