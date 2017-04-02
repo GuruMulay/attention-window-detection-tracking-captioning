@@ -81,6 +81,7 @@ celerybeat-schedule
 # virtualenv
 venv/
 ENV/
+env/
 
 # Spyder project settings
 .spyderproject
@@ -133,3 +134,13 @@ flycheck_*.el
 
 # directory configuration
 .dir-locals.el
+
+# Video files
+*.avi
+*.mp4
+*.mov
+*.ogv
+
+# Misc
+*.orig
+.idea/
