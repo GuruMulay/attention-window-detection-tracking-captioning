@@ -6,7 +6,7 @@ MOSSE tracking sample
 This sample implements correlation-based tracking approach, described in [1].
 
 Usage:
-  mosse.py [--pause] [<video source>]
+  mosse.py [--pause] [<video source>] [iterations of erosion]
 
   --pause  -  Start with playback paused at the first video frame.
               Useful for tracking target selection.
@@ -59,10 +59,19 @@ def divSpec(A, B):
 
 eps = 1e-5
 
+
+
 class MOSSE:
-    def __init__(self, frame, rect, index):
+    MosseCounter = 0
+    def __init__(self, frame, rect, index, prev_id=0, reInit=False):
+        self.stationary_for_frames = 0
         x1, y1, x2, y2 = rect
         self.index = index
+        if not reInit:            
+            self.id_ = MOSSE.MosseCounter
+            MOSSE.MosseCounter = MOSSE.MosseCounter + 1
+        else:
+            self.id_ = prev_id
         w, h = map(cv2.getOptimalDFTSize, [x2-x1, y2-y1])
         x1, y1 = (x1+x2-w)//2, (y1+y2-h)//2
         self.pos = x, y = x1+0.5*(w-1), y1+0.5*(h-1)
@@ -93,9 +102,15 @@ class MOSSE:
         self.last_resp, (dx, dy), self.psr = self.correlate(img)
         self.good = self.psr > 8.0
         if not self.good:
+            self.stationary_for_frames = self.stationary_for_frames + 1
             return
 
         self.pos = x+dx, y+dy
+        if abs(dx) + abs(dy) < 1:
+            self.stationary_for_frames = self.stationary_for_frames + 1
+        else:
+            self.stationary_for_frames = 0
+        
         self.last_img = img = cv2.getRectSubPix(frame, (w, h), self.pos)
         img = self.preprocess(img)
 
@@ -119,16 +134,17 @@ class MOSSE:
         return vis
 
     def draw_state(self, vis):
-        (x, y), (w, h) = self.pos, self.size
-        x1, y1, x2, y2 = int(x-0.5*w), int(y-0.5*h), int(x+0.5*w), int(y+0.5*h)
-        cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 0, 255))
-        if self.good:
-            cv2.circle(vis, (int(x), int(y)), 2, (0, 0, 255), -1)
-        else:
-            cv2.line(vis, (x1, y1), (x2, y2), (0, 0, 255))
-            cv2.line(vis, (x2, y1), (x1, y2), (0, 0, 255))
-        draw_str(vis, (x1, y2+16), 'PSR: %.2f' % (self.psr))
-        draw_str(vis, (x1, y1-6), 'Object: %d' % (self.index))
+        if self.stationary_for_frames < 40:
+            (x, y), (w, h) = self.pos, self.size
+            x1, y1, x2, y2 = int(x-0.5*w), int(y-0.5*h), int(x+0.5*w), int(y+0.5*h)
+            cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 0, 255))        
+            if self.good:
+                cv2.circle(vis, (int(x), int(y)), 2, (0, 0, 255), -1)
+            else:
+                cv2.line(vis, (x1, y1), (x2, y2), (0, 0, 255))
+                cv2.line(vis, (x2, y1), (x1, y2), (0, 0, 255))
+            draw_str(vis, (x1, y2+16), 'PSR: %.2f' % (self.psr))
+            draw_str(vis, (x1, y1-6), 'Object: %d' % (self.id_))
 
     def preprocess(self, img):
         img = np.log(np.float32(img)+1.0)
@@ -178,11 +194,19 @@ class App:
                     break
                 # First update existing trackers with current frame
                 frame_gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+                # Remove mosse trackers that are statinary for 100 frames
+                for tracker in self.trackers:
+                    if (tracker.stationary_for_frames > 100):
+                        self.trackers.remove(tracker)
                 # Calculate the union of all existing trackers
                 # The type of object returned depends on the relationship between the operands. 
                 # The union of polygons (for example) will be a polygon or a multi-polygon depending on whether they intersect or not.
                 union_of_trackers = None
+                index = 0
                 for tracker in self.trackers:
+                    # fix tracker index
+                    tracker.index = index
+                    index = index + 1
                     tracker.update(frame_gray)
                     (x, y), (w, h) = tracker.pos, tracker.size
                     # tracker returns center and size; convert it to topleft and bottomright points
@@ -214,11 +238,13 @@ class App:
                         #if(r.area  > b.area):
                         common_area = r.intersection(b).area
                         ratio_covered = common_area/b.area
-                        print(ratio_covered)
-                        if ratio_covered > .5:
-                            if r.area > b.area:
+                        #print(ratio_covered)
+                        if ratio_covered > .2:
+                            if r.area / b.area > 1.2 or b.area / r.area > 1.2:
                                 x1, y1, x2, y2 = r.union(b).bounds
-                                self.trackers[tracker.index] = MOSSE(frame_gray, (int(x1), int(y1), int(x2), int(y2)), tracker.index)
+                                self.trackers[tracker.index] = MOSSE(frame_gray, (int(x1), int(y1), int(x2), int(y2)), tracker.index, tracker.id_, reInit=True)
+                            else:
+                                tracker.stationary_for_frames = 0
                             new_rect = False
                             break
                             
@@ -241,8 +267,8 @@ class App:
             vis = self.frame.copy()
             for tracker in self.trackers:
                 tracker.draw_state(vis)
-            if len(self.trackers) > 0:
-                cv2.imshow('tracker state', self.trackers[-1].state_vis)
+            #if len(self.trackers) > 0:
+            #    cv2.imshow('tracker state', self.trackers[-1].state_vis)
             self.rect_sel.draw(vis)
 
             cv2.imshow('frame', vis)
