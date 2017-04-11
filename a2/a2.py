@@ -152,62 +152,74 @@ def process(impl, frame, *args):
     else:
         raise ValueError('Unimplemented implementation name passed as argument')
 
+class FeatureDetection:
+    def __init__(self, process='dbscan'):
+        self.sift = cv2.xfeatures2d.SIFT_create()
+        self.process = process
+    
+    def get_window(self,frame):
+        aw, kps = process(self.process, frame, self.sift)
+        return extract_window_from_frame(aw, frame)
+
+
+
+
 
 # The main thread follows below
+if __name__ == '__main__':
+    input_video = cv2.VideoCapture(sys.argv[1])
 
-input_video = cv2.VideoCapture(sys.argv[1])
+    # Exit if can't open the input file
+    if not input_video.isOpened():
+        print "Can't open the input video {}".format(sys.argv[1])
+        sys.exit(0)
 
-# Exit if can't open the input file
-if not input_video.isOpened():
-    print "Can't open the input video {}".format(sys.argv[1])
-    sys.exit(0)
+    sift = cv2.xfeatures2d.SIFT_create()
+    #bms = BMS(opening_width=13, dilation_width=1, normalize=False)
+    #bms = BMS()
 
-sift = cv2.xfeatures2d.SIFT_create()
-#bms = BMS(opening_width=13, dilation_width=1, normalize=False)
-#bms = BMS()
+    cv2.namedWindow("Test", cv2.WINDOW_AUTOSIZE)
 
-cv2.namedWindow("Test", cv2.WINDOW_AUTOSIZE)
+    frame_counter = 0
+    while True:
+        read_success, frame = input_video.read()
+        if len(sys.argv)>2 and frame_counter < int(sys.argv[2]):
+            frame_counter += 1
+            continue
 
-frame_counter = 0
-while True:
-    read_success, frame = input_video.read()
-    if len(sys.argv)>2 and frame_counter < int(sys.argv[2]):
-        frame_counter += 1
-        continue
+        if read_success:
+            print 'Advancing to next frame'
 
-    if read_success:
-        print 'Advancing to next frame'
+            # Replace 'naive' with your own implementation
+            # which should accept a frame returned by cv2.VideoCapture
+            # and optionally one or more extra arguments if needed
+            # Be sure to link your implementation in _impls
+            # aw, kps = process('naive', frame, sift)
+            aw, kps = process('dbscan', frame, sift)
 
-        # Replace 'naive' with your own implementation
-        # which should accept a frame returned by cv2.VideoCapture
-        # and optionally one or more extra arguments if needed
-        # Be sure to link your implementation in _impls
-        # aw, kps = process('naive', frame, sift)
-        aw, kps = process('dbscan', frame, sift)
+            frame_with_kps = frame.copy()
+            num_colors = len(cluster_dbscan.colors)
+            for i in list(range(0, 50)):
+                class_i = [kp for kp in kps if kp.class_id == i]
+                if len(class_i) > 0:
+                    frame_with_kps = cv2.drawKeypoints(frame_with_kps, class_i, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, color = cluster_dbscan.colors[i%num_colors])
 
-        frame_with_kps = frame.copy()
-        num_colors = len(cluster_dbscan.colors)
-        for i in list(range(0, 50)):
-            class_i = [kp for kp in kps if kp.class_id == i]
-            if len(class_i) > 0:
-                frame_with_kps = cv2.drawKeypoints(frame_with_kps, class_i, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, color = cluster_dbscan.colors[i%num_colors])
+            class_i = [kp for kp in kps if kp.class_id == -1]
+            frame_with_kps = cv2.drawKeypoints(frame_with_kps, class_i, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, color = [255,255,255])
+            frame_with_kps = cv2.rectangle(frame_with_kps, (int(aw[0]), int(aw[1])), (int(aw[2]), int(aw[3])) , (0,255,255),3)
 
-        class_i = [kp for kp in kps if kp.class_id == -1]
-        frame_with_kps = cv2.drawKeypoints(frame_with_kps, class_i, frame_with_kps, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, color = [255,255,255])
-        frame_with_kps = cv2.rectangle(frame_with_kps, (int(aw[0]), int(aw[1])), (int(aw[2]), int(aw[3])) , (0,255,255),3)
+            frame_counter += 1
 
-        frame_counter += 1
+            cv2.imshow("Test", frame_with_kps)
+            cv2.imwrite('results/' + str(frame_counter) + '.jpg', extract_window_from_frame(aw, frame))
 
-        cv2.imshow("Test", frame_with_kps)
-        cv2.imwrite('results/' + str(frame_counter) + '.jpg', extract_window_from_frame(aw, frame))
-
-        # Use 'q' to stop the processing
-        # and any other key to progress to next frame
-        if cv2.waitKey(1000) == ord('q'):
+            # Use 'q' to stop the processing
+            # and any other key to progress to next frame
+            if cv2.waitKey(1000) == ord('q'):
+                break
+        else:
+            print 'Reached end of video. Stopping...'
             break
-    else:
-        print 'Reached end of video. Stopping...'
-        break
 
-cv2.destroyWindow("Test")
-input_video.release()
+    cv2.destroyWindow("Test")
+    input_video.release()
