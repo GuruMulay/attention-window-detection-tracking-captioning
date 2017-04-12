@@ -53,9 +53,9 @@ if __name__ == '__main__':
         video_src = '0'
         
         
-    app = MotionTracker(video_src)
-    app.run()    
-    app.out.release()
+    #app = MotionTracker(video_src)
+    #app.run()    
+    #app.out.release()
     cap = cv2.VideoCapture(video_src)
     video_frames = []
     while(1):
@@ -121,6 +121,7 @@ if __name__ == '__main__':
 
     for key in track_dict:
         print('object :' + key)
+        classified_as = {}
         for image in track_dict[key]['image_stack']:    
             cv2.imshow(key,image)
             cv2.waitKey(10)
@@ -130,4 +131,31 @@ if __name__ == '__main__':
 
             for index, p in enumerate(preds):
                 print "Prediction: %s; Probability: %f"%(class_names[p], probs[index, p])
+                if class_names[p] in classified_as:
+                    classified_as[class_names[p]] += 1
+                else:
+                    classified_as[class_names[p]] = 1
+        most_common_class = ""
+        frequency = -1
+        for k in classified_as:
+            if classified_as[k] > frequency:
+                print(classified_as[k], frequency)
+                frequency = classified_as[k]
+                most_common_class = k                
+        print classified_as
+        print("Most Common Class: " + most_common_class)
+        track_dict[key]['image_stack'] = None
+        track_dict[key]['class'] = most_common_class
+        track_dict[key]['frequency'] = frequency
+    print track_dict
+    
+    with open('classes.csv', 'wb') as csvfile:
+        spamwriter = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for key in track_dict:
+            track = track_dict[key]
+            frequency = round(track['frequency'] * 100.0 /(track['frame_end'] - track['frame_start']), 2)
+            spamwriter.writerow(['moving',track['frame_start'], track['frame_end'], track['x1'], track['y1'], track['class'], frequency])
+        
+        
+            
     
