@@ -53,9 +53,9 @@ if __name__ == '__main__':
         video_src = '0'
         
         
-    #app = MotionTracker(video_src)
-    #app.run()    
-    #app.out.release()
+    app = MotionTracker(video_src)
+    app.run()    
+    app.out.release()
     cap = cv2.VideoCapture(video_src)
     video_frames = []
     while(1):
