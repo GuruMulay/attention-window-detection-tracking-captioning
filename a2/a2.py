@@ -28,7 +28,7 @@ def keypoint_to_window(kp):
     return (x0, y0, x1, y1)
 
 
-def extract_window_from_frame(w, frame):
+def extract_window_from_frame(aw, frame):
     """Uses an affine transform to extract the attention window from frame
 
     Args:
@@ -152,14 +152,14 @@ def process(impl, frame, *args):
     else:
         raise ValueError('Unimplemented implementation name passed as argument')
 
-class FeatureDetection:
+class FeatureDetector:
     def __init__(self, process='dbscan'):
         self.sift = cv2.xfeatures2d.SIFT_create()
         self.process = process
     
     def get_window(self,frame):
         aw, kps = process(self.process, frame, self.sift)
-        return extract_window_from_frame(aw, frame)
+        return extract_window_from_frame(aw, frame), aw
 
 
 

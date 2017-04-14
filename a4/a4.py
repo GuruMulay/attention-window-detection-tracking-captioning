@@ -13,7 +13,7 @@ sys.path.append('../a2')
 sys.path.append('../a3')
 from vgg16 import vgg16
 from imagenet_classes import class_names
-from a2 import FeatureDetection
+from a2 import FeatureDetector
 from mog_mosse import MotionTracker
 
 def resize_image(img):
@@ -53,9 +53,9 @@ if __name__ == '__main__':
         video_src = '0'
         
         
-    #app = MotionTracker(video_src)
-    #app.run()    
-    #app.out.release()
+    app = MotionTracker(video_src)
+    app.run()    
+    app.out.release()
     cap = cv2.VideoCapture(video_src)
     video_frames = []
     while(1):
@@ -64,7 +64,7 @@ if __name__ == '__main__':
             video_frames.append(frame)
         else:
             break;
-    print len(video_frames)
+    #print len(video_frames)
     cap.release()
     
     track_dict = {}
@@ -86,8 +86,8 @@ if __name__ == '__main__':
                 
                 img = video_frames[int(row[1])][y1:y2,x1:x2]
                 img = resize_image(img)      
-                cv2.imshow(row[0],img)
-                cv2.waitKey(10)
+                #cv2.imshow(row[0],img)
+                #cv2.waitKey(10)
                 if row[0] in track_dict:
                     track_dict[row[0]]['frame_end'] = max(track_dict[row[0]]['frame_end'],int(row[1]))
                     track_dict[row[0]]['image_stack'].append(img)
@@ -109,7 +109,7 @@ if __name__ == '__main__':
                 #img = resize_image(img)
                 #cv2.imshow(row[0],img)
                 #cv2.waitKey(100)
-    print track_dict
+    #print track_dict
     
     
             
@@ -118,11 +118,11 @@ if __name__ == '__main__':
     images = tf.placeholder(tf.float32, [None, 224, 224, 3])
     vgg = vgg16(images, 'vgg/vgg16_weights.npz', sess)
 
-
+    # Add moving objects
     for key in track_dict:
         print('object :' + key)
         classified_as = {}
-        for image in track_dict[key]['image_stack']:    
+        for image in track_dict[key]['image_stack']:
             cv2.imshow(key,image)
             cv2.waitKey(10)
             image_stack  = np.stack([image])
@@ -150,12 +150,39 @@ if __name__ == '__main__':
     print track_dict
     
     with open('classes.csv', 'wb') as csvfile:
-        spamwriter = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csvWriter = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for key in track_dict:
             track = track_dict[key]
             frequency = round(track['frequency'] * 100.0 /(track['frame_end'] - track['frame_start']), 2)
-            spamwriter.writerow(['moving',track['frame_start'], track['frame_end'], track['x1'], track['y1'], track['class'], frequency])
-        
-        
-            
+            csvWriter.writerow(['moving',track['frame_start'], track['frame_end'], track['x1'], track['y1'], track['class'], frequency])
     
+    #Add background features
+    print "starting"
+    feature_windows = []
+    featureDetector = FeatureDetector('naive')
+    frame_count = 0
+    for frame in video_frames:
+        window, aw = featureDetector.get_window(frame)
+        window = resize_image(window)        
+        cv2.imshow('feature',window)
+        cv2.waitKey(10)
+        image_stack  = np.stack([window])
+        probs = sess.run(vgg.probs, feed_dict={vgg.imgs: image_stack})            
+        preds = np.argmax(probs, axis=1)
+        for index, p in enumerate(preds):
+            print "Prediction: %s; Probability: %f"%(class_names[p], probs[index, p])  
+            w = {'frame_number':frame_count, 'x1': aw[0], 'y1': aw[1], 'class': class_names[p], 'activation': probs[index, p],'window':window}
+            feature_windows.append(w)    
+        frame_count += 1
+    
+    feature_windows = sorted(feature_windows, key=lambda k:k['activation'], reverse=True)
+    #print feature_windows[:4]
+    with open('classes.csv', 'a') as csvfile:
+        csvWriter = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)    
+        count = 0
+        for obj in feature_windows[:5]:
+            activation = round(obj['activation'],2)
+            frame_number = int(obj['frame_number'])
+            csvWriter.writerow(['still',frame_number, frame_number, int(obj['x1']), int(obj['y1']), obj['class'], activation])
+            cv2.imwrite(str(count) + '-' + str(activation) + '.jpg', obj['window'])
+        
