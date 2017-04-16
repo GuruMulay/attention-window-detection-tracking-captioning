@@ -3,9 +3,9 @@ import tensorflow as tf
 import numpy as np
 from scipy.misc import imread, imresize,imshow
 
-from PIL import Image
-from resizeimage import resizeimage
+
 import csv
+import shapely.geometry as gs
 
 import sys
 sys.path.append('vgg')
@@ -67,11 +67,15 @@ if __name__ == '__main__':
     #print len(video_frames)
     cap.release()
     
+    
+    unionOfForegroundRectsPerFrame = {}
+    
     track_dict = {}
     with open('tracks.csv', 'rb') as csvfile:        
         tracks = csv.reader(csvfile, delimiter=',', quotechar='|')            
         if tracks:
             for row in tracks:
+                frame_no = int(row[1])
                 x1,y1,x2,y2 = row[2:]
                 x1 = int(float(x1))
                 y1 = int(float(y1))
@@ -80,36 +84,34 @@ if __name__ == '__main__':
                 # let's grab a larger image; add padding
                 factor = 0.3
                 x1 = max(0,int(x1-(x2-x1)*factor))
-                x2 = min(video_frames[int(row[1])].shape[1]-1,int(x2+(x2-x1)*factor))
+                x2 = min(video_frames[frame_no].shape[1]-1,int(x2+(x2-x1)*factor))
                 y1 = max(0,int(y1-(y2-y1)*factor))
-                y2 = min(video_frames[int(row[1])].shape[0]-1,int(y2+(y2-y1)*factor))
+                y2 = min(video_frames[frame_no].shape[0]-1,int(y2+(y2-y1)*factor))
                 
-                img = video_frames[int(row[1])][y1:y2,x1:x2]
+                img = video_frames[int(frame_no)][y1:y2,x1:x2]
                 img = resize_image(img)      
                 #cv2.imshow(row[0],img)
                 #cv2.waitKey(10)
                 if row[0] in track_dict:
-                    track_dict[row[0]]['frame_end'] = max(track_dict[row[0]]['frame_end'],int(row[1]))
+                    track_dict[row[0]]['frame_end'] = max(track_dict[row[0]]['frame_end'],frame_no)
                     track_dict[row[0]]['image_stack'].append(img)
                 else:
                     row_dict = {}
-                    row_dict['frame_start'] = int(row[1])
-                    row_dict['frame_end'] = int(row[1])
+                    row_dict['frame_start'] = frame_no
+                    row_dict['frame_end'] = frame_no
                     row_dict['x1'] = int(float(row[2]))
                     row_dict['y1'] = int(float(row[3]))
                     row_dict['image_stack'] = [img]
                     track_dict[row[0]] = row_dict
-                #print row[2:]
-                #x1,y1,x2,y2 = row[2:]
-                #x1 = int(float(x1))
-                #y1 = int(float(y1))
-                #x2 = int(float(x2))
-                #y2 = int(float(y2))
-                #img = video_frames[int(row[1])][y1:y2,x1:x2]
-                #img = resize_image(img)
-                #cv2.imshow(row[0],img)
-                #cv2.waitKey(100)
-    #print track_dict
+                
+                b = gs.box(x1,y1,x2,y2)
+                if frame_no in unionOfForegroundRectsPerFrame:                    
+                    unionOfForegroundRectsPerFrame[frame_no] = unionOfForegroundRectsPerFrame[frame_no].union(b)
+                else:
+                    unionOfForegroundRectsPerFrame[frame_no] = b
+                    
+                    
+    print unionOfForegroundRectsPerFrame
     
     
             
@@ -159,10 +161,13 @@ if __name__ == '__main__':
     #Add background features
     print "starting"
     feature_windows = []
-    featureDetector = FeatureDetector('naive')
+    featureDetector = FeatureDetector('dbscan')
     frame_count = 0
     for frame in video_frames:
-        window, aw = featureDetector.get_window(frame)
+        if frame_count in unionOfForegroundRectsPerFrame:
+            window, aw = featureDetector.get_window(frame,unionOfForegroundRectsPerFrame[frame_count])
+        else:
+            window, aw = featureDetector.get_window(frame)
         window = resize_image(window)        
         cv2.imshow('feature',window)
         cv2.waitKey(10)
@@ -175,14 +180,23 @@ if __name__ == '__main__':
             feature_windows.append(w)    
         frame_count += 1
     
+    # sort feature_windows according to activation
     feature_windows = sorted(feature_windows, key=lambda k:k['activation'], reverse=True)
-    #print feature_windows[:4]
+    
+    # write best five objects according to activation into the csv file 
+    already_found_classes = {}
     with open('classes.csv', 'a') as csvfile:
         csvWriter = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)    
         count = 0
-        for obj in feature_windows[:5]:
-            activation = round(obj['activation'],2)
-            frame_number = int(obj['frame_number'])
-            csvWriter.writerow(['still',frame_number, frame_number, int(obj['x1']), int(obj['y1']), obj['class'], activation])
-            cv2.imwrite(str(count) + '-' + str(activation) + '.jpg', obj['window'])
+        for obj in feature_windows:
+            if count < 5:
+                if obj['class'] not in already_found_classes:
+                    activation = round(obj['activation'],2)
+                    frame_number = int(obj['frame_number'])
+                    csvWriter.writerow(['still',frame_number, frame_number, int(obj['x1']), int(obj['y1']), obj['class'], activation])
+                    cv2.imwrite(str(count) + '-' + str(activation) + '.jpg', obj['window'])
+                    already_found_classes[obj['class']] = True
+                    count += 1
+            else:
+                break
         

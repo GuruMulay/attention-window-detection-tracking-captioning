@@ -31,7 +31,7 @@ if PY3:
 
 import numpy as np
 import cv2
-import shapely.geometry as gs
+import shapely.geometry as gs 
 from common import draw_str, RectSelector
 import video
 

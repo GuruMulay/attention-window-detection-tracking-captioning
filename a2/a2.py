@@ -8,6 +8,8 @@ import window_history
 from clustering1 import cluster_keypoints
 import cluster_dbscan
 
+import shapely.geometry as gs 
+
 
 def keypoint_to_window(kp):
     """Converts the position of keypoint to a square window using its 'size'
@@ -157,8 +159,8 @@ class FeatureDetector:
         self.sift = cv2.xfeatures2d.SIFT_create()
         self.process = process
     
-    def get_window(self,frame):
-        aw, kps = process(self.process, frame, self.sift)
+    def get_window(self,frame, unionOfForegroundRects=None):
+        aw, kps = process(self.process, frame, self.sift,unionOfForegroundRects)
         return extract_window_from_frame(aw, frame), aw
 
 

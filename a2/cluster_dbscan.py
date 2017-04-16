@@ -9,6 +9,9 @@ import operator
 import numpy as np
 import sys
 
+import shapely.geometry as gs 
+
+
 # for coloring different clusters, used modulo when number of clusters is higher than defined colors
 colors=[
 [0,0,0],
@@ -106,7 +109,7 @@ def crop(frame, pt, size):
 		y1 = frame.shape[1]-1	
 	return frame[x0:x1, y0:y1]
 
-def cluster(frame, sift):
+def cluster(frame, sift,unionOfForegroundRects=None):
 	#frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
 	kps = sift.detect(frame, None)
@@ -191,7 +194,7 @@ def cluster(frame, sift):
 	for c in clusters:
 		aw = cluster_to_window(c)
 		octave, layer, scale= get_keypoint_attrs(c[0])
-		if window_history.add_if_new(aw, scale):
+		if window_history.add_if_new(aw, scale,unionOfForegroundRects):
 			frame_attention_window = aw
 			if len(sys.argv) > 3:
 				best_keypoints += kps # returning all keypoints for visualization

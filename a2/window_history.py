@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+import shapely.geometry as gs 
+
+
 _windows = []
 _sigmas = []
 _overlap_limit = 0.5
@@ -66,7 +69,7 @@ def _does_overlap(window, sigma):
     return False
 
 
-def add_if_new(window, sigma):
+def add_if_new(window, sigma, unionOfForegroundRects):
     """Adds the window to the history if it doesn't overlap with those already present there.
     
     Args:
@@ -76,6 +79,16 @@ def add_if_new(window, sigma):
     
     """
     assert len(window) == 4
+    
+    # make sure that the window does not overlap with foregound objects more than a threshold
+    if unionOfForegroundRects:
+        x,y,x1,y1 = window
+        r = gs.box(x,y,x1,y1)
+        common_area = unionOfForegroundRects.intersection(r).area
+        ratio_covered = common_area/r.area
+        if ratio_covered > .5:
+            return False
+    
 
     is_added = False
     if not _does_overlap(window, sigma):
