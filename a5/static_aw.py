@@ -42,8 +42,8 @@ if __name__ == '__main__':
         sm = get_saliency_map(frame, b, 600)
         sm_norm = sm / 255.0
 
-        leakage = 0.02
-        thresh = 15.0
+        leakage = 0.0
+        thresh = 0.0
 
         # Accumulate new response with leakage
         gsm += sm_norm
@@ -59,14 +59,15 @@ if __name__ == '__main__':
         elif gsm[max_h, max_w] > thresh:
             att_h, att_w = max_h, max_w
 
-            top = max_h - window_size if max_h - window_size >= 0 else 0
-            bottom = max_h + window_size if max_h + window_size <= fh else fh
-            left = max_w - window_size if max_w - window_size >= 0 else 0
-            right = max_w + window_size if max_w + window_size <= fw else fw
+        top = att_h - window_size if att_h - window_size >= 0 else 0
+        bottom = att_h + window_size if att_h + window_size <= fh else fh
+        left = att_w - window_size if att_w - window_size >= 0 else 0
+        right = att_w + window_size if att_w + window_size <= fw else fw
 
-            gsm[top:bottom, left:right] = 0.0
+        gsm[top:bottom, left:right] = 0.0
 
-            cv2.imshow("Attention Window", frame[top:bottom, left:right])
+        cv2.imshow("Attention Window", frame[top:bottom, left:right])
+        cv2.imwrite('out/' + str(fnum) + '.png', frame[top:bottom, left:right])
 
         sm = cv2.drawMarker(sm, (att_w, att_h), color=255, markerType=cv2.MARKER_SQUARE, markerSize=window_size,
                             thickness=5)
