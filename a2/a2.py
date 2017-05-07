@@ -69,7 +69,7 @@ def get_keypoint_attrs(k):
     return (octave, layer, scale)
 
 
-def process_naive(frame, sift):
+def process_naive(frame, sift,unionOfForegroundRects=None):
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     kps = sift.detect(frame_gray, None)
@@ -82,7 +82,7 @@ def process_naive(frame, sift):
         aw = keypoint_to_window(kps[i])
         octave, layer, scale = get_keypoint_attrs(kps[i])
 
-        if window_history.add_if_new(aw, scale):
+        if window_history.add_if_new(aw, scale,unionOfForegroundRects):
             frame_attention_window = aw
             best_keypoints += [kps[i]]
             break
@@ -91,7 +91,7 @@ def process_naive(frame, sift):
     return (frame_attention_window, best_keypoints)
 
 
-def process_naive2(frame, sift):
+def process_naive2(frame, sift,unionOfForegroundRects=None):
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     kps = sift.detect(frame_gray, None)
@@ -115,7 +115,7 @@ def process_naive2(frame, sift):
         aw = keypoint_to_window(kp)
         octave, layer, scale = get_keypoint_attrs(kp)
 
-        if window_history.add_if_new(aw, scale):
+        if window_history.add_if_new(aw, scale,unionOfForegroundRects):
             frame_attention_window = aw
             best_keypoints += [ kp ]
             break
@@ -161,6 +161,27 @@ class FeatureDetector:
     
     def get_window(self,frame, unionOfForegroundRects=None):
         aw, kps = process(self.process, frame, self.sift,unionOfForegroundRects)
+        
+        # make sure window size is at least 224x224
+        x,y,x1,y1 = aw
+        cx = int((x1 + x)/2.0)
+        cy = int((y1 + y)/2.0)
+        if abs(x-x1) < 224:
+            x = cx - 112
+            x1 = cx + 112
+        if abs(y - y1) < 224:
+            y = cy - 112
+            y1 = cy + 112
+        if x < 0:
+            x = 0
+        if x1 > frame.shape[1]-1:
+            x1 = frame.shape[1] - 1
+        if y < 0:
+            y = 0
+        if y1 > frame.shape[0]-1:
+            y1 = frame.shape[0] - 1
+        aw = (x,y,x1,y1)
+            
         return extract_window_from_frame(aw, frame), aw
 
 

@@ -86,7 +86,7 @@ def add_if_new(window, sigma, unionOfForegroundRects):
         r = gs.box(x,y,x1,y1)
         common_area = unionOfForegroundRects.intersection(r).area
         ratio_covered = common_area/r.area
-        if ratio_covered > .5:
+        if ratio_covered > .3:
             return False
     
 

@@ -3,10 +3,10 @@ import tensorflow as tf
 import numpy as np
 from scipy.misc import imread, imresize,imshow
 
-
 import csv
 import shapely.geometry as gs
 
+import os
 import sys
 sys.path.append('vgg')
 sys.path.append('../a2')
@@ -33,7 +33,15 @@ def resize_image(img):
         img1 = imresize(img, (h, w))
     
     return img1
-    
+
+
+def load_images_from_folder(folder):
+    images = []
+    for filename in os.listdir(folder):
+        img = cv2.imread(os.path.join(folder,filename))
+        if img is not None:
+            images.append(img)
+    return images    
     
 
 
@@ -52,7 +60,7 @@ if __name__ == '__main__':
     except:
         video_src = '0'
         
-        
+    
     app = MotionTracker(video_src)
     app.run()    
     app.out.release()
@@ -66,6 +74,7 @@ if __name__ == '__main__':
             break;
     #print len(video_frames)
     cap.release()
+    
     
     
     unionOfForegroundRectsPerFrame = {}
@@ -95,12 +104,19 @@ if __name__ == '__main__':
                 if row[0] in track_dict:
                     track_dict[row[0]]['frame_end'] = max(track_dict[row[0]]['frame_end'],frame_no)
                     track_dict[row[0]]['image_stack'].append(img)
+                    # end position, center
+                    row_dict['x2'] = (x1+x2)/2
+                    row_dict['y2'] = (y1+y2)/2
                 else:
                     row_dict = {}
                     row_dict['frame_start'] = frame_no
                     row_dict['frame_end'] = frame_no
-                    row_dict['x1'] = int(float(row[2]))
-                    row_dict['y1'] = int(float(row[3]))
+                    # start position, center
+                    row_dict['x1'] = (x1+x2)/2
+                    row_dict['y1'] = (y1+y2)/2
+                    # end position, center
+                    row_dict['x2'] = (x1+x2)/2
+                    row_dict['y2'] = (y1+y2)/2
                     row_dict['image_stack'] = [img]
                     track_dict[row[0]] = row_dict
                 
@@ -113,14 +129,13 @@ if __name__ == '__main__':
                     
     print unionOfForegroundRectsPerFrame
     
-    
-            
-    
+
     sess = tf.Session()
     images = tf.placeholder(tf.float32, [None, 224, 224, 3])
     vgg = vgg16(images, 'vgg/vgg16_weights.npz', sess)
 
     # Add moving objects
+    
     for key in track_dict:
         print('object :' + key)
         classified_as = {}
@@ -156,7 +171,14 @@ if __name__ == '__main__':
         for key in track_dict:
             track = track_dict[key]
             frequency = round(track['frequency'] * 100.0 /(track['frame_end'] - track['frame_start']), 2)
-            csvWriter.writerow(['moving',track['frame_start'], track['frame_end'], track['x1'], track['y1'], track['class'], frequency])
+            csvWriter.writerow(['moving',track['frame_start'], track['frame_end'], track['x1'], track['y1'], track['x2'], track['y2'], track['class'], frequency])
+    
+    
+    #=============================================
+    #video_frames = load_images_from_folder('../tests/out_with_threshold');
+    #unionOfForegroundRectsPerFrame = {}
+    
+    #=============================================
     
     #Add background features
     print "starting"
@@ -164,10 +186,16 @@ if __name__ == '__main__':
     featureDetector = FeatureDetector('dbscan')
     frame_count = 0
     for frame in video_frames:
+        
         if frame_count in unionOfForegroundRectsPerFrame:
             window, aw = featureDetector.get_window(frame,unionOfForegroundRectsPerFrame[frame_count])
         else:
             window, aw = featureDetector.get_window(frame)
+        
+        #===========================
+        #window = frame
+        #aw = [0,0]
+        #===========================
         window = resize_image(window)        
         cv2.imshow('feature',window)
         cv2.waitKey(10)
@@ -176,7 +204,7 @@ if __name__ == '__main__':
         preds = np.argmax(probs, axis=1)
         for index, p in enumerate(preds):
             print "Prediction: %s; Probability: %f"%(class_names[p], probs[index, p])  
-            w = {'frame_number':frame_count, 'x1': aw[0], 'y1': aw[1], 'class': class_names[p], 'activation': probs[index, p],'window':window}
+            w = {'frame_number':frame_count, 'x1': aw[0], 'y1': aw[1], 'x2': aw[2], 'y2': aw[3], 'class': class_names[p], 'activation': probs[index, p],'window':window}
             feature_windows.append(w)    
         frame_count += 1
     
@@ -189,12 +217,12 @@ if __name__ == '__main__':
         csvWriter = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)    
         count = 0
         for obj in feature_windows:
-            if count < 5:
+            if count < 10:
                 if obj['class'] not in already_found_classes:
                     activation = round(obj['activation'],2)
                     frame_number = int(obj['frame_number'])
-                    csvWriter.writerow(['still',frame_number, frame_number, int(obj['x1']), int(obj['y1']), obj['class'], activation])
-                    cv2.imwrite(str(count) + '-' + str(activation) + '.jpg', obj['window'])
+                    csvWriter.writerow(['still',frame_number, frame_number, int(obj['x1']), int(obj['y1']), int(obj['x2']), int(obj['y2']), obj['class'], activation])
+                    cv2.imwrite('img/' + str(count) + '-' + str(activation) + '.jpg', obj['window'])
                     already_found_classes[obj['class']] = True
                     count += 1
             else:

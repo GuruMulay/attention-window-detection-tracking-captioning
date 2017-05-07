@@ -51,7 +51,7 @@ def clustering_pixels(X, n_clusters):
     return clusters
 
 
-def cluster_keypoints(frame, sift):
+def cluster_keypoints(frame, sift,unionOfForegroundRects=None):
     # frame = cv2.medianBlur(frame, 5)
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     # frame_gray = cv2.Canny(frame_gray, 100, 200, 7)
@@ -127,7 +127,7 @@ def cluster_keypoints(frame, sift):
             frame_attention_window = aw
 
         octave, layer, scale = get_keypoint_attrs(best_keypoints_list[0][0]) # choose the 0th keypoint
-        if window_history.add_if_new(aw, scale):
+        if window_history.add_if_new(aw, scale,unionOfForegroundRects):
             frame_attention_window = aw
             break
 
