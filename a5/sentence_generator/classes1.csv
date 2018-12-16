@@ -1,0 +1,8 @@
+type,start_frame,end_frame,x1,y1,x2,y2, label, freq/activation
+moving,98,218,52,488,475,472,minivan,79.17
+moving,74,218,1210,490,1082,474,"pickup, pickup truck",94.44
+still,23,23,53,185,277,409,barn,0.82
+still,217,217,912,124,1136,348,"flagpole, flagstaff",0.7
+still,81,81,152,183,376,407,boathouse,0.5
+still,199,199,0,192,139,416,"thresher, thrasher, threshing machine",0.47
+still,219,219,238,205,462,429,"limousine, limo", 0.4

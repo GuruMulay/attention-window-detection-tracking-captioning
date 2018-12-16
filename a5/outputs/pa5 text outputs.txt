@@ -1,0 +1,10 @@
+video 1:
+In the background, there is a barn in the middle left, a flagpole in the upper right, a boathouse in the middle left, a thresher in the middle left, a limousine in the middle left.
+In the foreground, a minivan (moving towards right slowly) AND a pickup (moving towards left slowly) are moving in opposite direction.
+
+
+video 2:
+In the background, there is a racer in the center, a mobile home in the middle left, a maze in the center, a paddlewheel in the upper left, a aircraft carrier in the middle left, a warplane in the middle left, a liner in the upper left.
+In the foreground, a moving van (moving towards left slowly) , a limousine (moving towards left slowly) are moving in same direction.
+
+
