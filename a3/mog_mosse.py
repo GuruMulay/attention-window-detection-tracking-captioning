@@ -31,7 +31,7 @@ if PY3:
 
 import numpy as np
 import cv2
-import shapely.geometry as gs
+import shapely.geometry as gs 
 from common import draw_str, RectSelector
 import video
 
@@ -166,7 +166,7 @@ class MOSSE:
         self.H = divSpec(self.H1, self.H2)
         self.H[...,1] *= -1
 
-class App:
+class MotionTracker:
     def __init__(self, video_src, paused = False):
         self.cap = video.create_capture(video_src)
         _, self.frame = self.cap.read()
@@ -257,8 +257,17 @@ class App:
                 # write csv output file
                 for tracker in self.trackers:
                     (x, y), (w, h) = tracker.pos, tracker.size
+                    x1, y1, x2, y2 = int(x-0.5*w), int(y-0.5*h), int(x+0.5*w), int(y+0.5*h)
+                    if x1 < 0: 
+                        x1 = 0
+                    if y1 < 0:
+                        y1 = 0
+                    if x2 > self.frame.shape[1]-1:
+                        x2 = self.frame.shape[1]-1
+                    if y2 > self.frame.shape[0]-1:
+                        y2 = self.frame.shape[0]-1
                     writer = csv.writer(csvf)
-                    writer.writerow((tracker.index, frame_number, x, y, x+w, y+h))
+                    writer.writerow((tracker.index, frame_number, x1, y1, x2, y2))
 
                 # print("self.trackers", self.trackers)
                 # print("frame number", frame_number)
@@ -296,6 +305,6 @@ if __name__ == '__main__':
     except:
         video_src = '0'
 
-    app = App(video_src, paused = '--pause' in opts)
+    app = MotionTracker(video_src, paused = '--pause' in opts)
     app.run()    
     app.out.release()

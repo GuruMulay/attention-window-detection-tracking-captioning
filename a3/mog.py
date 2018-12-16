@@ -2,11 +2,7 @@ import numpy as np
 import cv2
 import sys
 
-if len(sys.argv) < 1:
-    print("Missing parameter")
-    quit();
 
-video_src = sys.argv[1]
 fgbg = cv2.bgsegm.createBackgroundSubtractorMOG(history=500,nmixtures=5,backgroundRatio=.5,noiseSigma=1)
 #fgbg = cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=16,detectShadows=True)
 
@@ -24,6 +20,7 @@ def getForegroundRects(frame):
     #erosion = cv2.erode(fgmask,kernel,iterations = 1)
     opening = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
     
+    erosion_iteration = 10
     if len(sys.argv) > 2:
         erosion_iteration = int(sys.argv[2])
     
@@ -48,6 +45,11 @@ def getForegroundRects(frame):
 
 
 if __name__ == '__main__':    
+    if len(sys.argv) < 2:
+        print("Missing parameter")
+        quit();
+
+    video_src = sys.argv[1]
     cap = cv2.VideoCapture(video_src)
     reference_frame = None
     frame_count = 0
