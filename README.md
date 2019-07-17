@@ -1,13 +1,23 @@
 # CS510 Assignments (Spring 17)
 
 <p align="center">
-  <img src="https://gurumulay.github.io/vision/vision-1/?raw=true" alt=""/>
+  <img src="https://gurumulay.github.io/images/vision/image-computation/img-comp1.png?raw=true" alt=""/>
 </p>
 
 <p align="center">
-  <img src="
-https://youtu.be/Ajp-H0SiAGo?raw=true" alt=""/>
+  <img src="https://gurumulay.github.io/images/vision/image-computation/clustering.png?raw=true" alt=""/>
 </p>
+
+<p align="center">
+  <img src="https://gurumulay.github.io/images/vision/image-computation/saliency.png?raw=true" alt=""/>
+</p>
+
+
+<video width="730" autoplay loop="loop" controls="false">
+  <source src="https://youtu.be/Ajp-H0SiAGo" type="video/mp4">
+  <p>Unfortunately, your browser doesn't support HTML5 embedded videos. Here is
+    a <a href="https://gurumulay.github.io/images/vision/raytracer/dr2_1.mp4">link to the video</a> instead.</p>
+</video>
 
 
 ## Instructions for working with branches
