@@ -1,4 +1,15 @@
 # CS510 Assignments (Spring 17)
+
+<p align="center">
+  <img src="https://gurumulay.github.io/vision/vision-1/?raw=true" alt=""/>
+</p>
+
+<p align="center">
+  <img src="
+https://youtu.be/Ajp-H0SiAGo?raw=true" alt=""/>
+</p>
+
+
 ## Instructions for working with branches
 1. First off, try to make commits as small and incremental as possible, so that there is not a huge chunk of code that changes with a single commit.
 2. No one pushes to `master` or `development`
