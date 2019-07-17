@@ -14,9 +14,9 @@
 
 
 <video width="730" autoplay loop="loop" controls="false">
-  <source src="https://youtu.be/Ajp-H0SiAGo" type="video/mp4">
+  <source src="https://www.youtube.com/watch?v=Ajp-H0SiAGo" type="video/mp4">
   <p>Unfortunately, your browser doesn't support HTML5 embedded videos. Here is
-    a <a href="https://youtu.be/Ajp-H0SiAG">link to the video</a> instead.</p>
+    a <a href="https://www.youtube.com/watch?v=Ajp-H0SiAGo">link to the video</a> instead.</p>
 </video>
 
 
