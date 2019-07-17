@@ -16,7 +16,7 @@
 <video width="730" autoplay loop="loop" controls="false">
   <source src="https://youtu.be/Ajp-H0SiAGo" type="video/mp4">
   <p>Unfortunately, your browser doesn't support HTML5 embedded videos. Here is
-    a <a href="https://gurumulay.github.io/images/vision/raytracer/dr2_1.mp4">link to the video</a> instead.</p>
+    a <a href="https://youtu.be/Ajp-H0SiAG">link to the video</a> instead.</p>
 </video>
 
 
